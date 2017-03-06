@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+    <title>Node Authentication</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/chessboard-0.3.0.min.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="js/chessboard-0.3.0.min.js"></script>
+    <script src="js/primus.js"></script>
+    <style>
+        body         { padding-top:80px; word-wrap:break-word; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="page-header text-center">
+        <h1><span class="fa fa-anchor"></span> Let's Play the Game.. </h1>
+        <a href="/logout" class="btn btn-default btn-sm">Logout</a>
+    </div>
+
+    <div class="row">
+
+        <!-- LOCAL INFORMATION -->
+        <div class="col-sm-12">
+            <div class="well">
+                <h3><span class="fa fa-user"></span>   <%= user.local.email %> </h3>
+            </div>
+                <center>
+                  Game Link <span id="gameurl"/>
+                </center>
+<!--
+                <% if (user.local.email) { %>
+                    <p>
+                        <strong>id</strong>: <%= user._id %><br>
+                        <strong>email</strong>: <%= user.local.email %><br>
+                        <strong>password</strong>: <%= user.local.password %>
+                    </p>
+
+                    <a href="/unlink/local" class="btn btn-default">Unlink</a>
+                <% } else { %>
+                    <a href="/connect/local" class="btn btn-default">Connect Local</a>
+                <% } %>
+              -->
+
+
+        </div>
+
+    </div>
+    <div class="row">
+              <center>
+                <div id="board1" style="width: 400px"></div>
+                <br/>
+              </center>
+
+
+    </div>
+
+    <div class="text-center">
+        <h3>Developed as a project </h3>
+    </div>
+
+</div>
+
+<script>
+
+       var finalUrl = "" ;
+              function getUrlVars()
+              {
+                  var vars = [], hash;
+                  var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+                  for(var i = 0; i < hashes.length; i++)
+                  {
+                      hash = hashes[i].split('=');
+                      vars.push(hash[0]);
+                      vars[hash[0]] = hash[1];
+                  }
+                  return vars;
+              }
+
+
+              // dec2hex :: Integer -> String
+              function dec2hex (dec) {
+                return ('0' + dec.toString(16)).substr(-2)
+              }
+
+              // generateId :: Integer -> String
+              function generateId (len) {
+                var arr = new Uint8Array((len || 40) / 2)
+                window.crypto.getRandomValues(arr)
+                return Array.from(arr).map(dec2hex).join('')
+              }
+
+             var gameId = getUrlVars()['gameId'];
+             if(!gameId) {
+               gameId = generateId(20);
+               finalUrl = window.location.href + "?gameId="+gameId;
+             } else {
+               finalUrl = window.location.href ;
+             }
+
+             //document.write("<br/><br/><a href='"+finalUrl+"'>"+finalUrl+"</a>");
+             document.getElementById('gameurl').innerHTML += "<a href='"+finalUrl+"'>"+finalUrl+"</a><br/><br/>";
+            </script>
+            </body>
+
+            <script type="text/javascript">
+            var primus = new Primus();
+
+
+              primus.write({ action: 'join', room: gameId, data : { user : '<%= user.local.email %>'} });
+              //primus.write({ action: 'leave', room: 'news' });
+              // print server message
+
+
+
+               console.log("Game ID = " + gameId) ;
+
+               var onChange = function(oldPos, newPos) {
+               console.log("Position changed:");
+
+               console.log("New position: " + ChessBoard.objToFen(newPos));
+
+               primus.write({ action: 'data', room: gameId, data : { pos : ChessBoard.objToFen(newPos), date : new Date(), user : '<%= user.local.email %>' } });
+               console.log("--------------------");
+             };
+               var cfg = {
+               draggable: true,
+               dropOffBoard: 'snapback', // this is the default
+               position: 'start',
+               onChange: onChange
+             };
+               var board1 = ChessBoard('board1', cfg);
+               primus.on('data', function (message) {
+                 //console.log(message);
+                 if(message.action == 'update' && message.data.pos) {
+                   board1.position(message.data.pos)    ;
+                   //document.getElementById('log').innerHTML += '<br>'+ message.data.user;
+                 }
+
+
+               });
+
+               if(getUrlVars()['gameId']) {
+                 board1.orientation('black');
+               }
+
+
+  </script>
+</body>
+</html>
